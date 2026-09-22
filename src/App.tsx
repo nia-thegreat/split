@@ -1,8 +1,14 @@
+import { useState } from 'react'
+import type { Group } from './model/group'
+import { GroupScreen } from './components/GroupScreen'
+import { GroupSetupScreen } from './components/GroupSetupScreen'
+
 function App() {
+  const [createdGroup, setCreatedGroup] = useState<Group | null>(null)
+
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-3xl font-semibold text-neutral-900">Split</h1>
-      <p className="text-neutral-500">Expense splitting, coming soon.</p>
+    <div className="flex min-h-svh flex-col">
+      {createdGroup ? <GroupScreen group={createdGroup} /> : <GroupSetupScreen onCreate={setCreatedGroup} />}
     </div>
   )
 }
