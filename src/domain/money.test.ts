@@ -68,6 +68,24 @@ describe('splitEvenly', () => {
       Sara: 2500,
     })
   })
+
+  it('gives one person the full amount', () => {
+    expect(splitEvenly(7777, ['Nia'])).toEqual({ Nia: 7777 })
+  })
+
+  it('rejects an empty selection', () => {
+    expect(() => splitEvenly(10000, [])).toThrow(RangeError)
+  })
+
+  it('always distributes the total exactly across uneven divisions', () => {
+    for (const total of [1, 9999, 10001, 12345]) {
+      for (const count of [1, 2, 3, 4, 5]) {
+        const people = Array.from({ length: count }, (_, index) => `P${index}`)
+        const result = splitEvenly(total, people)
+        expect(Object.values(result).reduce((sum, value) => sum + value, 0)).toBe(total)
+      }
+    }
+  })
 })
 
 describe('splitByWeights', () => {

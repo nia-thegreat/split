@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { paiseToRupees, rupeesToPaise } from '../domain/money'
+import { paiseToRupees, rupeesToPaise, splitEvenly } from '../domain/money'
 import type { Paise } from '../domain/money'
 import type { ExpenseRecord, NewExpenseInput } from '../model/expense'
 import type { Group, Person } from '../model/group'
@@ -49,6 +49,8 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
   )
   const [modelErrors, setModelErrors] = useState<string[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [selectedForSplit, setSelectedForSplit] = useState<Id[]>([])
+  const [splitError, setSplitError] = useState<string | null>(null)
 
   const updateRow = (
     rows: RowDraft[],
@@ -77,6 +79,37 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
 
   const addShare = () => {
     setShares([...shares, { id: newId(), personId: nextUnusedPerson(group.people, shares).id, amount: '' }])
+  }
+
+  const toggleSplitPerson = (personId: Id) => {
+    setSelectedForSplit((previous) =>
+      previous.includes(personId) ? previous.filter((id) => id !== personId) : [...previous, personId],
+    )
+    setSplitError(null)
+  }
+
+  const handleSplitEqually = () => {
+    if (selectedForSplit.length === 0) {
+      setSplitError('Select at least one person to split equally.')
+      return
+    }
+    let totalPaise: Paise
+    try {
+      totalPaise = rupeesToPaise(total)
+    } catch {
+      setSplitError('Enter a valid total amount before splitting equally.')
+      return
+    }
+    const amounts = splitEvenly(totalPaise, selectedForSplit)
+    setShares(
+      selectedForSplit.map((personId) => ({
+        id: newId(),
+        personId,
+        amount: paiseToRupees(amounts[personId] ?? 0),
+      })),
+    )
+    setSplitError(null)
+    setFieldErrors({})
   }
 
   const handleSave = (event: FormEvent) => {
@@ -183,10 +216,48 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-neutral-700">Owed by</h2>
-            <Button variant="secondary" onClick={addShare} className="px-3 py-1.5">
-              Add share
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={handleSplitEqually} className="px-3 py-1.5">
+                Split equally
+              </Button>
+              <Button variant="secondary" onClick={addShare} className="px-3 py-1.5">
+                Add share
+              </Button>
+            </div>
           </div>
+
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+            <p className="text-sm text-neutral-600">Split between</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {group.people.map((person) => {
+                const selected = selectedForSplit.includes(person.id)
+                return (
+                  <button
+                    key={person.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => toggleSplitPerson(person.id)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                      selected
+                        ? 'bg-emerald-600 text-white'
+                        : 'border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-100'
+                    }`}
+                  >
+                    {person.name}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-2 text-xs text-neutral-500">
+              Pick who owes, then tap &ldquo;Split equally&rdquo; to divide the total across them.
+            </p>
+            {splitError ? (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                {splitError}
+              </p>
+            ) : null}
+          </div>
+
           <ul className="flex flex-col gap-2">
             {shares.map((row) => (
               <li key={row.id}>
