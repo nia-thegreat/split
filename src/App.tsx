@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import type { NewExpenseInput } from './model/expense'
 import { getExpenseById, recordExpense, removeExpense, updateExpense } from './model/expense'
-import type { Group } from './model/group'
 import type { Id } from './model/id'
 import { ExpenseFormScreen } from './components/ExpenseFormScreen'
 import type { ExpenseMutationResult } from './components/ExpenseFormScreen'
 import { GroupScreen } from './components/GroupScreen'
 import { GroupSetupScreen } from './components/GroupSetupScreen'
+import { usePersistedGroup } from './hooks/usePersistedGroup'
 
 type ExpenseFormState = { mode: 'create' } | { mode: 'edit'; expenseId: Id }
 
 function App() {
-  const [group, setGroup] = useState<Group | null>(null)
+  const { group, setGroup } = usePersistedGroup()
   const [expenseForm, setExpenseForm] = useState<ExpenseFormState | null>(null)
 
   const handleSaveExpense = (input: NewExpenseInput): ExpenseMutationResult => {
