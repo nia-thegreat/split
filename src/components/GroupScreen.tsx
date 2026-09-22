@@ -1,7 +1,15 @@
+import { paiseToRupees } from '../domain/money'
+import type { ExpenseRecord } from '../model/expense'
 import type { Group } from '../model/group'
+import type { Id } from '../model/id'
+import { getPersonById } from '../model/group'
+import { Button } from './Button'
 
 interface GroupScreenProps {
   group: Group
+  onAddExpense: () => void
+  onEditExpense: (expenseId: Id) => void
+  onRemoveExpense: (expenseId: Id) => void
 }
 
 function initialsOf(name: string): string {
@@ -12,7 +20,13 @@ function pluralise(count: number): string {
   return count === 1 ? 'person' : 'people'
 }
 
-export function GroupScreen({ group }: GroupScreenProps) {
+function payersLabel(group: Group, expense: ExpenseRecord): string {
+  return expense.payments
+    .map((payment) => getPersonById(group, payment.personId)?.name ?? 'Someone')
+    .join(', ')
+}
+
+export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpense }: GroupScreenProps) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-10">
       <header className="mb-8">
@@ -25,6 +39,51 @@ export function GroupScreen({ group }: GroupScreenProps) {
           {group.people.length} {pluralise(group.people.length)}
         </p>
       </div>
+
+      <div className="mt-8 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-medium text-neutral-700">Expenses</h2>
+        <Button onClick={onAddExpense} className="px-3 py-1.5">
+          Add expense
+        </Button>
+      </div>
+      {group.expenses.length === 0 ? (
+        <p className="mt-3 text-sm text-neutral-400">No expenses yet. Add the first one.</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
+          {group.expenses.map((expense) => (
+            <li key={expense.id} className="flex items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-neutral-900">{expense.description}</p>
+                <p className="truncate text-sm text-neutral-500">
+                  ₹{paiseToRupees(expense.totalPaise)} · Paid by {payersLabel(group, expense)}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => onEditExpense(expense.id)}
+                className="shrink-0 px-3 py-1.5"
+              >
+                Edit
+              </Button>
+              <Button
+                variant="danger"
+                aria-label={`Remove ${expense.description}`}
+                onClick={() => onRemoveExpense(expense.id)}
+                className="shrink-0 px-2.5 py-1.5"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                >
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
+                </svg>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <h2 className="mt-8 text-sm font-medium text-neutral-700">People</h2>
       {group.people.length === 0 ? (

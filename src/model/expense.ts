@@ -43,7 +43,9 @@ export function getExpenseById(group: Group, expenseId: Id): ExpenseRecord | und
   return group.expenses.find((expense) => expense.id === expenseId)
 }
 
-export function recordExpense(group: Group, input: NewExpenseInput): RecordExpenseResult {
+type BuildExpenseResult = { ok: true; expense: ExpenseRecord } | { ok: false; errors: string[] }
+
+function buildExpense(group: Group, input: NewExpenseInput): BuildExpenseResult {
   const unknownIds = new Set<Id>()
   const personExists = (personId: Id): boolean => {
     const known = getPersonById(group, personId) !== undefined
@@ -82,7 +84,31 @@ export function recordExpense(group: Group, input: NewExpenseInput): RecordExpen
   if (!validation.ok) {
     return { ok: false, errors: validation.errors }
   }
+  return { ok: true, expense }
+}
+
+export function recordExpense(group: Group, input: NewExpenseInput): RecordExpenseResult {
+  const built = buildExpense(group, input)
+  if (!built.ok) {
+    return built
+  }
+  const { expense } = built
   return { ok: true, group: { ...group, expenses: [...group.expenses, expense] }, expense }
+}
+
+export function updateExpense(group: Group, expenseId: Id, input: NewExpenseInput): RecordExpenseResult {
+  const index = group.expenses.findIndex((expense) => expense.id === expenseId)
+  if (index === -1) {
+    return { ok: false, errors: [`No expense with id "${expenseId}" was found in this group.`] }
+  }
+  const built = buildExpense(group, input)
+  if (!built.ok) {
+    return built
+  }
+  const expense = { ...built.expense, id: expenseId }
+  const expenses = [...group.expenses]
+  expenses[index] = expense
+  return { ok: true, group: { ...group, expenses }, expense }
 }
 
 export function removeExpense(group: Group, expenseId: Id): RemoveExpenseResult {
