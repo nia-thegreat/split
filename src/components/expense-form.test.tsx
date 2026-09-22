@@ -25,6 +25,8 @@ describe('ExpenseFormScreen', () => {
     expect(html).toContain('Total amount')
     expect(html).toContain('Paid by')
     expect(html).toContain('Owed by')
+    expect(html).toContain('Split equally')
+    expect(html).toContain('Split between')
     expect(html).toContain('Save expense')
   })
 
