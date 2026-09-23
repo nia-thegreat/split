@@ -4,6 +4,7 @@ import type { Group } from '../model/group'
 import type { Id } from '../model/id'
 import { getPersonById } from '../model/group'
 import { Button } from './Button'
+import { SettlementSections } from './SettlementSections'
 
 interface GroupScreenProps {
   group: Group
@@ -38,6 +39,10 @@ export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpens
         <p className="mt-1 text-sm text-neutral-500">
           {group.people.length} {pluralise(group.people.length)}
         </p>
+      </div>
+
+      <div className="mt-8">
+        <SettlementSections group={group} />
       </div>
 
       <div className="mt-8 flex items-center justify-between gap-3">

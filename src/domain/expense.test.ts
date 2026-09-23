@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { calculateBalances, calculateSettlements, totalOwed, totalPaid } from './expense'
+import {
+  aggregateBalances,
+  calculateBalances,
+  calculateSettlements,
+  settlementsFromBalances,
+  totalOwed,
+  totalPaid,
+} from './expense'
 import type { Balance, Expense, Settlement } from './expense'
 import { rupeesToPaise as rs } from './money'
 
@@ -180,6 +187,106 @@ describe('zero balances', () => {
   it('excludes zero-balance people from settlements', () => {
     const settlements = calculateSettlements(expense)
     expect(settlements).toEqual([{ from: 'Rahul', to: 'Nia', amountPaise: rs('500') }])
+  })
+})
+
+describe('aggregateBalances', () => {
+  it('returns an empty list for no expenses', () => {
+    expect(aggregateBalances([])).toEqual([])
+  })
+
+  it('merges net balances across multiple expenses per person', () => {
+    const first = makeExpense(
+      'Dinner',
+      '1000',
+      [['Nia', '1000']],
+      [
+        ['Nia', '500'],
+        ['Rahul', '500'],
+      ],
+    )
+    const second = makeExpense(
+      'Groceries',
+      '800',
+      [['Rahul', '800']],
+      [
+        ['Nia', '400'],
+        ['Rahul', '400'],
+      ],
+    )
+    const balances = Object.fromEntries(
+      aggregateBalances([first, second]).map((balance) => [balance.person, balance.balancePaise]),
+    )
+    expect(balances).toEqual({ Nia: rs('100'), Rahul: -rs('100') })
+  })
+
+  it('keeps zero-balance people in the aggregate', () => {
+    const expense = makeExpense(
+      'Cab',
+      '600',
+      [['Nia', '600']],
+      [
+        ['Nia', '300'],
+        ['Rahul', '300'],
+        ['Anu', '0'],
+      ],
+    )
+    const balances = Object.fromEntries(
+      aggregateBalances([expense]).map((balance) => [balance.person, balance.balancePaise]),
+    )
+    expect(balances).toEqual({ Nia: rs('300'), Rahul: -rs('300'), Anu: 0 })
+  })
+})
+
+describe('settlementsFromBalances', () => {
+  it('returns no transfers for an empty balance list', () => {
+    expect(settlementsFromBalances([])).toEqual([])
+  })
+
+  it('returns no transfers when everyone is settled', () => {
+    expect(
+      settlementsFromBalances([
+        { person: 'Nia', balancePaise: 0 },
+        { person: 'Rahul', balancePaise: 0 },
+      ]),
+    ).toEqual([])
+  })
+
+  it('returns no transfers for a lone surplus or deficit', () => {
+    expect(settlementsFromBalances([{ person: 'Nia', balancePaise: rs('500') }])).toEqual([])
+    expect(settlementsFromBalances([{ person: 'Nia', balancePaise: -rs('500') }])).toEqual([])
+  })
+
+  it('matches the practical transfer example', () => {
+    expect(
+      settlementsFromBalances([
+        { person: 'Nia', balancePaise: rs('500') },
+        { person: 'Rahul', balancePaise: -rs('100') },
+        { person: 'Anu', balancePaise: rs('100') },
+        { person: 'Sara', balancePaise: -rs('500') },
+      ]),
+    ).toEqual([
+      { from: 'Sara', to: 'Nia', amountPaise: rs('500') },
+      { from: 'Rahul', to: 'Anu', amountPaise: rs('100') },
+    ])
+  })
+
+  it('settles every balance with no self-transfers and minimal transfers', () => {
+    const balances: Balance[] = [
+      { person: 'Nia', balancePaise: rs('350') },
+      { person: 'Anu', balancePaise: rs('150') },
+      { person: 'Rahul', balancePaise: -rs('200') },
+      { person: 'Sara', balancePaise: -rs('300') },
+    ]
+    const settlements = settlementsFromBalances(balances)
+    for (const settlement of settlements) {
+      expect(settlement.from).not.toBe(settlement.to)
+    }
+    const ledger = applySettlements(balances, settlements)
+    for (const value of Object.values(ledger)) {
+      expect(value).toBe(0)
+    }
+    expect(settlements.reduce((sum, s) => sum + s.amountPaise, 0)).toBe(rs('500'))
   })
 })
 

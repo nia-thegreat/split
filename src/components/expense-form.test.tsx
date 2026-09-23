@@ -95,4 +95,61 @@ describe('GroupScreen', () => {
     expect(html).toContain('₹3000.00')
     expect(html).toContain('Paid by Nia')
   })
+
+  it('shows correct balances for each person', () => {
+    const group = makeGroup()
+    const reported = recordExpense(group, {
+      description: 'Dinner',
+      totalPaise: rs('3000'),
+      payments: [{ personId: group.people[0].id, amountPaise: rs('3000') }],
+      shares: group.people.map((person) => ({ personId: person.id, amountPaise: rs('1000') })),
+    })
+    if (!reported.ok) {
+      throw new Error('expected a valid expense')
+    }
+    const html = renderToStaticMarkup(
+      <GroupScreen
+        group={reported.group}
+        onAddExpense={() => {}}
+        onEditExpense={() => {}}
+        onRemoveExpense={() => {}}
+      />,
+    )
+    expect(html).toContain('Balances')
+    expect(html).toContain('+₹2000.00')
+    expect(html).toContain('−₹1000.00')
+  })
+
+  it('shows suggested transfers between debtors and creditors', () => {
+    const group = makeGroup()
+    const reported = recordExpense(group, {
+      description: 'Dinner',
+      totalPaise: rs('3000'),
+      payments: [{ personId: group.people[0].id, amountPaise: rs('3000') }],
+      shares: group.people.map((person) => ({ personId: person.id, amountPaise: rs('1000') })),
+    })
+    if (!reported.ok) {
+      throw new Error('expected a valid expense')
+    }
+    const html = renderToStaticMarkup(
+      <GroupScreen
+        group={reported.group}
+        onAddExpense={() => {}}
+        onEditExpense={() => {}}
+        onRemoveExpense={() => {}}
+      />,
+    )
+    expect(html).toContain('Who pays whom')
+    expect(html).toContain('Rahul')
+    expect(html).toContain('→')
+    expect(html).toContain('₹1000.00')
+  })
+
+  it('shows an empty balances state before any expenses', () => {
+    const group = makeGroup()
+    const html = renderToStaticMarkup(
+      <GroupScreen group={group} onAddExpense={() => {}} onEditExpense={() => {}} onRemoveExpense={() => {}} />,
+    )
+    expect(html).toContain('No balances yet')
+  })
 })

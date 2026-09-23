@@ -47,10 +47,20 @@ export function calculateBalances(expense: Expense): Balance[] {
   return Array.from(balances, ([person, balancePaise]) => ({ person, balancePaise }))
 }
 
-export function calculateSettlements(expense: Expense): Settlement[] {
+export function aggregateBalances(expenses: Expense[]): Balance[] {
+  const balances = new Map<string, Paise>()
+  for (const expense of expenses) {
+    for (const { person, balancePaise } of calculateBalances(expense)) {
+      balances.set(person, (balances.get(person) ?? 0) + balancePaise)
+    }
+  }
+  return Array.from(balances, ([person, balancePaise]) => ({ person, balancePaise }))
+}
+
+export function settlementsFromBalances(balances: Balance[]): Settlement[] {
   const deficits = new Map<string, Paise>()
   const surpluses = new Map<string, Paise>()
-  for (const { person, balancePaise } of calculateBalances(expense)) {
+  for (const { person, balancePaise } of balances) {
     if (balancePaise > 0) surpluses.set(person, balancePaise)
     if (balancePaise < 0) deficits.set(person, -balancePaise)
   }
@@ -74,4 +84,8 @@ export function calculateSettlements(expense: Expense): Settlement[] {
   }
 
   return settlements
+}
+
+export function calculateSettlements(expense: Expense): Settlement[] {
+  return settlementsFromBalances(calculateBalances(expense))
 }
