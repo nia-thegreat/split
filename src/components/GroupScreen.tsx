@@ -29,8 +29,18 @@ function payersLabel(group: Group, expense: ExpenseRecord): string {
     .join(', ')
 }
 
+function sharesLabel(group: Group, expense: ExpenseRecord): string {
+  return expense.shares
+    .map((share) => {
+      const name = getPersonById(group, share.personId)?.name ?? 'Someone'
+      return `${name} owes ₹${paiseToRupees(share.amountPaise)}`
+    })
+    .join(', ')
+}
+
 export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpense, onReset }: GroupScreenProps) {
   const [confirmingReset, setConfirmingReset] = useState(false)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<Id | null>(null)
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-10">
@@ -58,16 +68,12 @@ export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpens
             <Button variant="secondary" onClick={() => setConfirmingReset(false)} className="flex-1">
               Cancel
             </Button>
-            <Button type="button" onClick={onReset} className="flex-1">
+            <Button variant="destructive" onClick={onReset} className="flex-1">
               Start new group
             </Button>
           </div>
         </div>
       ) : null}
-
-      <div className="mt-8">
-        <SettlementSections group={group} />
-      </div>
 
       <div className="mt-8 flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium text-neutral-700">Expenses</h2>
@@ -76,43 +82,72 @@ export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpens
         </Button>
       </div>
       {group.expenses.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-400">No expenses yet. Add the first one.</p>
+        <p className="mt-3 text-sm text-neutral-400">No expenses yet — add the first one.</p>
       ) : (
         <ul className="mt-3 divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
-          {group.expenses.map((expense) => (
+          {[...group.expenses].reverse().map((expense) => (
             <li key={expense.id} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-neutral-900">{expense.description}</p>
                 <p className="truncate text-sm text-neutral-500">
-                  ₹{paiseToRupees(expense.totalPaise)} · Paid by {payersLabel(group, expense)}
+                  Paid by {payersLabel(group, expense)} ₹{paiseToRupees(expense.totalPaise)} ·{' '}
+                  {sharesLabel(group, expense)}
                 </p>
               </div>
-              <Button
-                variant="secondary"
-                onClick={() => onEditExpense(expense.id)}
-                className="shrink-0 px-3 py-1.5"
-              >
-                Edit
-              </Button>
-              <Button
-                variant="danger"
-                aria-label={`Remove ${expense.description}`}
-                onClick={() => onRemoveExpense(expense.id)}
-                className="shrink-0 px-2.5 py-1.5"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                  className="h-4 w-4"
-                >
-                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
-                </svg>
-              </Button>
+              {confirmingDeleteId === expense.id ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-sm font-medium text-red-600">Delete this expense?</span>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirmingDeleteId(null)}
+                    className="px-3 py-1.5 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => onRemoveExpense(expense.id)}
+                    className="px-3 py-1.5 text-xs"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onEditExpense(expense.id)}
+                    className="shrink-0 px-3 py-1.5"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="danger"
+                    aria-label={`Remove ${expense.description}`}
+                    onClick={() => setConfirmingDeleteId(expense.id)}
+                    className="shrink-0 px-2.5 py-1.5"
+                  >
+                    <svg
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    >
+                      <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
+                    </svg>
+                  </Button>
+                </>
+              )}
             </li>
           ))}
         </ul>
       )}
+
+      {group.expenses.length > 0 ? (
+        <div className="mt-8">
+          <SettlementSections group={group} />
+        </div>
+      ) : null}
 
       <h2 className="mt-8 text-sm font-medium text-neutral-700">People</h2>
       {group.people.length === 0 ? (

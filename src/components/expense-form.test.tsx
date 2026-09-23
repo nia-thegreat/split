@@ -28,6 +28,9 @@ describe('ExpenseFormScreen', () => {
     expect(html).toContain('Split equally')
     expect(html).toContain('Split between')
     expect(html).toContain('Save expense')
+    expect(html).toContain('Who actually paid')
+    expect(html).toContain('Who should bear the cost')
+    expect(html).toContain('Paid ₹')
   })
 
   it('prefills edit mode from the existing expense', () => {
@@ -63,12 +66,12 @@ describe('GroupScreen', () => {
     const group = makeGroup()
     const html = renderToStaticMarkup(
       <GroupScreen
-      group={group}
-      onAddExpense={() => {}}
-      onEditExpense={() => {}}
-      onRemoveExpense={() => {}}
-      onReset={() => {}}
-    />,
+        group={group}
+        onAddExpense={() => {}}
+        onEditExpense={() => {}}
+        onRemoveExpense={() => {}}
+        onReset={() => {}}
+      />,
     )
     expect(html).toContain('No expenses yet')
     expect(html).toContain('Add expense')
@@ -102,6 +105,7 @@ describe('GroupScreen', () => {
     expect(html).toContain('Dinner at the casa')
     expect(html).toContain('₹3000.00')
     expect(html).toContain('Paid by Nia')
+    expect(html).toContain('Rahul owes ₹1000.00')
   })
 
   it('shows correct balances for each person', () => {
@@ -125,8 +129,8 @@ describe('GroupScreen', () => {
       />,
     )
     expect(html).toContain('Balances')
-    expect(html).toContain('+₹2000.00')
-    expect(html).toContain('−₹1000.00')
+    expect(html).toContain('is owed ₹2000.00')
+    expect(html).toContain('owes ₹1000.00')
   })
 
   it('shows suggested transfers between debtors and creditors', () => {
@@ -149,23 +153,25 @@ describe('GroupScreen', () => {
         onReset={() => {}}
       />,
     )
-    expect(html).toContain('Who pays whom')
+    expect(html).toContain('Suggested transfers to settle up')
     expect(html).toContain('Rahul')
     expect(html).toContain('→')
     expect(html).toContain('₹1000.00')
   })
 
-  it('shows an empty balances state before any expenses', () => {
+  it('shows a single empty state before any expenses', () => {
     const group = makeGroup()
     const html = renderToStaticMarkup(
       <GroupScreen
-      group={group}
-      onAddExpense={() => {}}
-      onEditExpense={() => {}}
-      onRemoveExpense={() => {}}
-      onReset={() => {}}
-    />,
+        group={group}
+        onAddExpense={() => {}}
+        onEditExpense={() => {}}
+        onRemoveExpense={() => {}}
+        onReset={() => {}}
+      />,
     )
-    expect(html).toContain('No balances yet')
+    expect(html).toContain('No expenses yet — add the first one.')
+    expect(html).not.toContain('Balances')
+    expect(html).not.toContain('Suggested transfers')
   })
 })

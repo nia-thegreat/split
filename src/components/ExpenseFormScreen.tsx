@@ -38,6 +38,26 @@ function nextUnusedPerson(people: Person[], rows: RowDraft[]): Person {
   return people.find((person) => !rows.some((row) => row.personId === person.id)) ?? people[0]
 }
 
+interface RunningTotalProps {
+  label: string
+  currentPaise: Paise
+  targetPaise: Paise | null
+  ok: boolean
+  hint: string
+}
+
+function RunningTotal({ label, currentPaise, targetPaise, ok, hint }: RunningTotalProps) {
+  const target = targetPaise !== null ? `₹${paiseToRupees(targetPaise)}` : '—'
+  return (
+    <p className={`text-xs font-medium ${ok ? 'text-emerald-600' : 'text-red-600'}`}>
+      {label} ₹{paiseToRupees(currentPaise)} / {target}
+      {!ok ? (
+        <span className="ml-1 font-normal normal-case">· {hint}</span>
+      ) : null}
+    </p>
+  )
+}
+
 export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: ExpenseFormScreenProps) {
   const [description, setDescription] = useState(initialExpense?.description ?? '')
   const [total, setTotal] = useState(initialExpense ? paiseToRupees(initialExpense.totalPaise) : '')
@@ -45,11 +65,10 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
     initialExpense ? initialExpense.payments.map(rowFromPayment) : [firstRow(group.people)],
   )
   const [shares, setShares] = useState<RowDraft[]>(
-    initialExpense ? initialExpense.shares.map(rowFromPayment) : [firstRow(group.people)],
+    initialExpense ? initialExpense.shares.map(rowFromPayment) : [],
   )
   const [modelErrors, setModelErrors] = useState<string[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const [selectedForSplit, setSelectedForSplit] = useState<Id[]>([])
   const [splitError, setSplitError] = useState<string | null>(null)
 
   const updateRow = (
@@ -77,19 +96,43 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
     setPayments([...payments, { id: newId(), personId: nextUnusedPerson(group.people, payments).id, amount: '' }])
   }
 
-  const addShare = () => {
-    setShares([...shares, { id: newId(), personId: nextUnusedPerson(group.people, shares).id, amount: '' }])
+  const parseAmount = (value: string): Paise | null => {
+    try {
+      return rupeesToPaise(value)
+    } catch {
+      return null
+    }
+  }
+
+  const handleAmountChange = (rows: RowDraft[], setRows: (next: RowDraft[]) => void, rowId: Id, amount: string) => {
+    updateRow(rows, setRows, rowId, { amount })
+    if (amount.trim() !== '' && parseAmount(amount) === null) {
+      setFieldErrors((previous) => ({ ...previous, [rowId]: 'Enter a valid amount.' }))
+    } else {
+      clearFieldError(rowId)
+    }
   }
 
   const toggleSplitPerson = (personId: Id) => {
-    setSelectedForSplit((previous) =>
-      previous.includes(personId) ? previous.filter((id) => id !== personId) : [...previous, personId],
-    )
+    const existing = shares.find((row) => row.personId === personId)
+    if (existing) {
+      removeRow(shares, setShares, existing.id)
+    } else {
+      setShares([...shares, { id: newId(), personId, amount: '' }])
+    }
     setSplitError(null)
   }
 
+  const handleTotalChange = (value: string) => {
+    setTotal(value)
+    clearFieldError('total')
+    if (payments.length === 1) {
+      setPayments(payments.map((row) => ({ ...row, amount: value })))
+    }
+  }
+
   const handleSplitEqually = () => {
-    if (selectedForSplit.length === 0) {
+    if (shares.length === 0) {
       setSplitError('Select at least one person to split equally.')
       return
     }
@@ -100,17 +143,22 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
       setSplitError('Enter a valid total amount before splitting equally.')
       return
     }
-    const amounts = splitEvenly(totalPaise, selectedForSplit)
+    const amounts = splitEvenly(totalPaise, shares.map((row) => row.personId))
     setShares(
-      selectedForSplit.map((personId) => ({
-        id: newId(),
-        personId,
-        amount: paiseToRupees(amounts[personId] ?? 0),
-      })),
+      shares.map((row) => ({ ...row, amount: paiseToRupees(amounts[row.personId] ?? 0) })),
     )
     setSplitError(null)
     setFieldErrors({})
   }
+
+  const totalPaiseValue = parseAmount(total)
+  const paidTotalPaise = payments.reduce((sum, row) => sum + (parseAmount(row.amount) ?? 0), 0)
+  const shareTotalPaise = shares.reduce((sum, row) => sum + (parseAmount(row.amount) ?? 0), 0)
+  const paidAllValid = payments.every((row) => parseAmount(row.amount) !== null)
+  const shareAllValid = shares.every((row) => parseAmount(row.amount) !== null)
+  const paidMatches = paidAllValid && totalPaiseValue !== null && paidTotalPaise === totalPaiseValue
+  const shareMatches = shareAllValid && totalPaiseValue !== null && shareTotalPaise === totalPaiseValue
+  const saveReady = paidMatches && shareMatches
 
   const handleSave = (event: FormEvent) => {
     event.preventDefault()
@@ -178,20 +226,23 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
           placeholder="0.00"
           inputMode="decimal"
           value={total}
-          onChange={(event) => {
-            setTotal(event.target.value)
-            clearFieldError('total')
-          }}
+          onChange={(event) => handleTotalChange(event.target.value)}
           error={fieldErrors.total}
         />
 
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-neutral-700">Paid by</h2>
-            <Button variant="secondary" onClick={addPayment} className="px-3 py-1.5">
+            <Button
+              variant="secondary"
+              onClick={addPayment}
+              disabled={payments.length >= group.people.length}
+              className="px-3 py-1.5"
+            >
               Add payer
             </Button>
           </div>
+          <p className="text-sm text-neutral-500">Who actually paid, and how much.</p>
           <ul className="flex flex-col gap-2">
             {payments.map((row) => (
               <li key={row.id}>
@@ -202,35 +253,30 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
                   error={fieldErrors[row.id]}
                   removeLabel="Remove payer"
                   onPersonChange={(personId) => updateRow(payments, setPayments, row.id, { personId })}
-                  onAmountChange={(amount) => {
-                    updateRow(payments, setPayments, row.id, { amount })
-                    clearFieldError(row.id)
-                  }}
+                  onAmountChange={(amount) => handleAmountChange(payments, setPayments, row.id, amount)}
                   onRemove={() => removeRow(payments, setPayments, row.id)}
                 />
               </li>
             ))}
           </ul>
+          <RunningTotal
+            label="Paid"
+            currentPaise={paidTotalPaise}
+            targetPaise={totalPaiseValue}
+            ok={paidMatches}
+            hint="Paid amount doesn&rsquo;t match the total."
+          />
         </section>
 
         <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-neutral-700">Owed by</h2>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={handleSplitEqually} className="px-3 py-1.5">
-                Split equally
-              </Button>
-              <Button variant="secondary" onClick={addShare} className="px-3 py-1.5">
-                Add share
-              </Button>
-            </div>
-          </div>
+          <h2 className="text-sm font-medium text-neutral-700">Owed by</h2>
+          <p className="text-sm text-neutral-500">Who should bear the cost, and their share.</p>
 
           <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-            <p className="text-sm text-neutral-600">Split between</p>
+            <p className="text-sm font-medium text-neutral-700">Split between</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {group.people.map((person) => {
-                const selected = selectedForSplit.includes(person.id)
+                const selected = shares.some((row) => row.personId === person.id)
                 return (
                   <button
                     key={person.id}
@@ -248,9 +294,14 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
                 )
               })}
             </div>
-            <p className="mt-2 text-xs text-neutral-500">
-              Pick who owes, then tap &ldquo;Split equally&rdquo; to divide the total across them.
-            </p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-neutral-500">
+                Pick who owes, then split the total across them. Edit any amount for a custom split.
+              </p>
+              <Button variant="secondary" onClick={handleSplitEqually} className="shrink-0 px-3 py-1.5">
+                Split equally
+              </Button>
+            </div>
             {splitError ? (
               <p role="alert" className="mt-2 text-sm text-red-600">
                 {splitError}
@@ -268,15 +319,19 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
                   error={fieldErrors[row.id]}
                   removeLabel="Remove share"
                   onPersonChange={(personId) => updateRow(shares, setShares, row.id, { personId })}
-                  onAmountChange={(amount) => {
-                    updateRow(shares, setShares, row.id, { amount })
-                    clearFieldError(row.id)
-                  }}
+                  onAmountChange={(amount) => handleAmountChange(shares, setShares, row.id, amount)}
                   onRemove={() => removeRow(shares, setShares, row.id)}
                 />
               </li>
             ))}
           </ul>
+          <RunningTotal
+            label="Shares"
+            currentPaise={shareTotalPaise}
+            targetPaise={totalPaiseValue}
+            ok={shareMatches}
+            hint="Shares don&rsquo;t add up to the total."
+          />
         </section>
 
         {modelErrors.length > 0 ? (
@@ -290,7 +345,7 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
         ) : null}
 
         <div className="flex gap-3">
-          <Button type="submit" className="flex-1">
+          <Button type="submit" disabled={!saveReady} className="flex-1">
             Save expense
           </Button>
           <Button variant="secondary" onClick={onCancel} className="flex-1">

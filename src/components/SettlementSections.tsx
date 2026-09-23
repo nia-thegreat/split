@@ -12,9 +12,11 @@ function initialsOf(name: string): string {
   return name.trim().slice(0, 2).toUpperCase()
 }
 
-function signedRupees(paise: Paise): string {
-  const absolute = paiseToRupees(Math.abs(paise))
-  return paise < 0 ? `−₹${absolute}` : `+₹${absolute}`
+function balanceLabel(balancePaise: Paise): string {
+  if (balancePaise > 0) {
+    return `is owed ₹${paiseToRupees(balancePaise)}`
+  }
+  return `owes ₹${paiseToRupees(Math.abs(balancePaise))}`
 }
 
 function BalanceAmount({ balancePaise }: { balancePaise: Paise }) {
@@ -24,15 +26,12 @@ function BalanceAmount({ balancePaise }: { balancePaise: Paise }) {
   const positive = balancePaise > 0
   return (
     <span className={`shrink-0 text-sm font-medium ${positive ? 'text-emerald-600' : 'text-red-600'}`}>
-      {signedRupees(balancePaise)}
+      {balanceLabel(balancePaise)}
     </span>
   )
 }
 
-function emptyStateMessage(balances: GroupBalance[], hasExpenses: boolean): string {
-  if (!hasExpenses) {
-    return 'Add an expense to see who owes whom.'
-  }
+function emptyStateMessage(balances: GroupBalance[]): string {
   if (balances.some((balance) => balance.balancePaise !== 0)) {
     return 'No transfers needed.'
   }
@@ -42,33 +41,32 @@ function emptyStateMessage(balances: GroupBalance[], hasExpenses: boolean): stri
 export function SettlementSections({ group }: SettlementSectionsProps) {
   const balances = getGroupBalances(group)
   const settlements = getGroupSettlements(group)
-  const hasExpenses = group.expenses.length > 0
+
+  if (group.expenses.length === 0) {
+    return null
+  }
 
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col">
         <h2 className="text-sm font-medium text-neutral-700">Balances</h2>
-        {!hasExpenses ? (
-          <p className="mt-3 text-sm text-neutral-400">No balances yet. Add an expense to see who owes whom.</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
-            {balances.map((balance) => (
-              <li key={balance.personId} className="flex items-center gap-3 px-4 py-2.5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
-                  {initialsOf(balance.name)}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-neutral-900">{balance.name}</span>
-                <BalanceAmount balancePaise={balance.balancePaise} />
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="mt-3 divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
+          {balances.map((balance) => (
+            <li key={balance.personId} className="flex items-center gap-3 px-4 py-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
+                {initialsOf(balance.name)}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-neutral-900">{balance.name}</span>
+              <BalanceAmount balancePaise={balance.balancePaise} />
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="flex flex-col">
-        <h2 className="text-sm font-medium text-neutral-700">Who pays whom</h2>
-        {!hasExpenses || settlements.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-400">{emptyStateMessage(balances, hasExpenses)}</p>
+        <h2 className="text-sm font-medium text-neutral-700">Suggested transfers to settle up</h2>
+        {settlements.length === 0 ? (
+          <p className="mt-3 text-sm text-neutral-400">{emptyStateMessage(balances)}</p>
         ) : (
           <ul className="mt-3 divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
             {settlements.map((settlement) => (
