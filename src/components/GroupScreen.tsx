@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { paiseToRupees } from '../domain/money'
 import type { ExpenseRecord } from '../model/expense'
 import type { Group } from '../model/group'
@@ -11,6 +12,7 @@ interface GroupScreenProps {
   onAddExpense: () => void
   onEditExpense: (expenseId: Id) => void
   onRemoveExpense: (expenseId: Id) => void
+  onReset: () => void
 }
 
 function initialsOf(name: string): string {
@@ -27,11 +29,16 @@ function payersLabel(group: Group, expense: ExpenseRecord): string {
     .join(', ')
 }
 
-export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpense }: GroupScreenProps) {
+export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpense, onReset }: GroupScreenProps) {
+  const [confirmingReset, setConfirmingReset] = useState(false)
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-10">
-      <header className="mb-8">
+      <header className="mb-8 flex items-center justify-between gap-3">
         <p className="text-sm font-semibold tracking-wide uppercase text-emerald-600">Split</p>
+        <Button variant="secondary" onClick={() => setConfirmingReset(true)} className="px-3 py-1.5">
+          New group
+        </Button>
       </header>
 
       <div className="rounded-2xl border border-neutral-200 bg-emerald-50 p-6">
@@ -40,6 +47,23 @@ export function GroupScreen({ group, onAddExpense, onEditExpense, onRemoveExpens
           {group.people.length} {pluralise(group.people.length)}
         </p>
       </div>
+
+      {confirmingReset ? (
+        <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
+          <p className="text-sm font-semibold text-neutral-900">Start a new group?</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            This clears the current group and all its expenses. This can&rsquo;t be undone.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button variant="secondary" onClick={() => setConfirmingReset(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button type="button" onClick={onReset} className="flex-1">
+              Start new group
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-8">
         <SettlementSections group={group} />

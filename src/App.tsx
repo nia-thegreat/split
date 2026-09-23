@@ -11,7 +11,7 @@ import { usePersistedGroup } from './hooks/usePersistedGroup'
 type ExpenseFormState = { mode: 'create' } | { mode: 'edit'; expenseId: Id }
 
 function App() {
-  const { group, setGroup } = usePersistedGroup()
+  const { group, setGroup, reset } = usePersistedGroup()
   const [expenseForm, setExpenseForm] = useState<ExpenseFormState | null>(null)
 
   const handleSaveExpense = (input: NewExpenseInput): ExpenseMutationResult => {
@@ -87,6 +87,7 @@ function App() {
         onAddExpense={() => setExpenseForm({ mode: 'create' })}
         onEditExpense={(expenseId) => setExpenseForm({ mode: 'edit', expenseId })}
         onRemoveExpense={handleRemoveExpense}
+        onReset={reset}
       />
     </div>
   )

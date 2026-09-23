@@ -62,10 +62,17 @@ describe('GroupScreen', () => {
   it('shows an empty expenses state and an add action', () => {
     const group = makeGroup()
     const html = renderToStaticMarkup(
-      <GroupScreen group={group} onAddExpense={() => {}} onEditExpense={() => {}} onRemoveExpense={() => {}} />,
+      <GroupScreen
+      group={group}
+      onAddExpense={() => {}}
+      onEditExpense={() => {}}
+      onRemoveExpense={() => {}}
+      onReset={() => {}}
+    />,
     )
     expect(html).toContain('No expenses yet')
     expect(html).toContain('Add expense')
+    expect(html).toContain('New group')
   })
 
   it('lists recorded expenses with totals', () => {
@@ -89,6 +96,7 @@ describe('GroupScreen', () => {
         onAddExpense={() => {}}
         onEditExpense={() => {}}
         onRemoveExpense={() => {}}
+        onReset={() => {}}
       />,
     )
     expect(html).toContain('Dinner at the casa')
@@ -113,6 +121,7 @@ describe('GroupScreen', () => {
         onAddExpense={() => {}}
         onEditExpense={() => {}}
         onRemoveExpense={() => {}}
+        onReset={() => {}}
       />,
     )
     expect(html).toContain('Balances')
@@ -137,6 +146,7 @@ describe('GroupScreen', () => {
         onAddExpense={() => {}}
         onEditExpense={() => {}}
         onRemoveExpense={() => {}}
+        onReset={() => {}}
       />,
     )
     expect(html).toContain('Who pays whom')
@@ -148,7 +158,13 @@ describe('GroupScreen', () => {
   it('shows an empty balances state before any expenses', () => {
     const group = makeGroup()
     const html = renderToStaticMarkup(
-      <GroupScreen group={group} onAddExpense={() => {}} onEditExpense={() => {}} onRemoveExpense={() => {}} />,
+      <GroupScreen
+      group={group}
+      onAddExpense={() => {}}
+      onEditExpense={() => {}}
+      onRemoveExpense={() => {}}
+      onReset={() => {}}
+    />,
     )
     expect(html).toContain('No balances yet')
   })
