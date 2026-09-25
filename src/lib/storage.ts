@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Group } from '../model/group'
+import { EXPENSE_CATEGORIES } from '../model/expense'
 
 export interface StorageLike {
   getItem(key: string): string | null
@@ -23,6 +24,7 @@ const amountSchema = z.object({
 const expenseSchema = z.object({
   id: z.string().min(1),
   description: z.string(),
+  category: z.enum(EXPENSE_CATEGORIES).default('Other'),
   totalPaise: z.number().int().nonnegative(),
   payments: z.array(amountSchema),
   shares: z.array(amountSchema),

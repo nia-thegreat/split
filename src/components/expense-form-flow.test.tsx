@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import type { ReactNode } from 'react'
 import { createGroup } from '../model/group'
 import type { Group } from '../model/group'
+import type { NewExpenseInput } from '../model/expense'
 import { ExpenseFormScreen } from './ExpenseFormScreen'
 import { GroupScreen } from './GroupScreen'
 import { recordExpense } from '../model/expense'
@@ -64,6 +65,22 @@ function setValue(input: HTMLInputElement, value: string): void {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
     setter?.call(input, value)
     input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+function categorySelect(container: HTMLDivElement): HTMLSelectElement {
+  const select = container.querySelector<HTMLSelectElement>('#expense-category')
+  if (!select) {
+    throw new Error('expected a category select')
+  }
+  return select
+}
+
+function setSelect(select: HTMLSelectElement, value: string): void {
+  act(() => {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')?.set
+    setter?.call(select, value)
+    select.dispatchEvent(new Event('change', { bubbles: true }))
   })
 }
 
@@ -135,6 +152,27 @@ describe('ExpenseFormScreen flow', () => {
     click(niaChip)
     expect(niaChip?.getAttribute('aria-pressed')).toBe('false')
     expect(amountInputs(container)).toHaveLength(1)
+  })
+
+  it('sends the chosen category to onSave', () => {
+    const group = makeGroup()
+    const onSave = vi.fn((input: NewExpenseInput): { ok: true } => {
+      void input
+      return { ok: true }
+    })
+    const container = mount(
+      <ExpenseFormScreen group={group} onSave={onSave} onCancel={() => {}} />,
+    )
+
+    setValue(totalInput(container), '300')
+    click(findButton(container, 'Nia'))
+    click(findButton(container, 'Split equally'))
+    expect(categorySelect(container).value).toBe('Other')
+    setSelect(categorySelect(container), 'Shopping')
+    click(findButton(container, 'Save expense'))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave.mock.calls[0][0].category).toBe('Shopping')
   })
 })
 

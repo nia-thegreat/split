@@ -18,9 +18,14 @@ export interface Share {
   amountPaise: Paise
 }
 
+export const EXPENSE_CATEGORIES = ['Food', 'Travel', 'Stay', 'Shopping', 'Entertainment', 'Other'] as const
+
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]
+
 export interface ExpenseRecord {
   id: Id
   description: string
+  category: ExpenseCategory
   totalPaise: Paise
   payments: Payment[]
   shares: Share[]
@@ -28,6 +33,7 @@ export interface ExpenseRecord {
 
 export interface NewExpenseInput {
   description: string
+  category?: ExpenseCategory
   totalPaise: Paise
   payments: Array<{ personId: Id; amountPaise: Paise }>
   shares: Array<{ personId: Id; amountPaise: Paise }>
@@ -63,6 +69,7 @@ function buildExpense(group: Group, input: NewExpenseInput): BuildExpenseResult 
   const expense: ExpenseRecord = {
     id: newId(),
     description: input.description.trim(),
+    category: input.category ?? 'Other',
     totalPaise: input.totalPaise,
     payments: input.payments.map((payment) => ({
       id: newId(),

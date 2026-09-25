@@ -43,6 +43,28 @@ describe('recordExpense', () => {
     expect(result.group).not.toBe(group)
   })
 
+  it('defaults the category to Other when none is provided', () => {
+    const group = makeGroup()
+    const result = recordExpense(group, defaultInput(group.people))
+    expect(result.ok).toBe(true)
+    if (!result.ok) {
+      return
+    }
+    expect(result.expense.category).toBe('Other')
+  })
+
+  it('records a provided category on the expense', () => {
+    const group = makeGroup()
+    const input = defaultInput(group.people)
+    input.category = 'Food'
+    const result = recordExpense(group, input)
+    expect(result.ok).toBe(true)
+    if (!result.ok) {
+      return
+    }
+    expect(result.expense.category).toBe('Food')
+  })
+
   it('trims the description before recording', () => {
     const group = makeGroup()
     const result = recordExpense(group, defaultInput(group.people))

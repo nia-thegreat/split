@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { paiseToRupees, rupeesToPaise, splitEvenly } from '../domain/money'
 import type { Paise } from '../domain/money'
-import type { ExpenseRecord, NewExpenseInput } from '../model/expense'
+import { EXPENSE_CATEGORIES } from '../model/expense'
+import type { ExpenseCategory, ExpenseRecord, NewExpenseInput } from '../model/expense'
 import type { Group, Person } from '../model/group'
 import type { Id } from '../model/id'
 import { newId } from '../model/id'
@@ -60,6 +61,7 @@ function RunningTotal({ label, currentPaise, targetPaise, ok, hint }: RunningTot
 
 export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: ExpenseFormScreenProps) {
   const [description, setDescription] = useState(initialExpense?.description ?? '')
+  const [category, setCategory] = useState<ExpenseCategory>(initialExpense?.category ?? 'Other')
   const [total, setTotal] = useState(initialExpense ? paiseToRupees(initialExpense.totalPaise) : '')
   const [payments, setPayments] = useState<RowDraft[]>(
     initialExpense ? initialExpense.payments.map(rowFromPayment) : [firstRow(group.people)],
@@ -192,6 +194,7 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
 
     const input: NewExpenseInput = {
       description,
+      category,
       totalPaise,
       payments: payments.map((row, index) => ({ personId: row.personId, amountPaise: paymentAmounts[index] })),
       shares: shares.map((row, index) => ({ personId: row.personId, amountPaise: shareAmounts[index] })),
@@ -220,6 +223,24 @@ export function ExpenseFormScreen({ group, initialExpense, onSave, onCancel }: E
           onChange={(event) => setDescription(event.target.value)}
           autoFocus
         />
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="expense-category" className="text-sm font-medium text-neutral-700">
+            Category (optional)
+          </label>
+          <select
+            id="expense-category"
+            value={category}
+            onChange={(event) => setCategory(event.target.value as ExpenseCategory)}
+            className="h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm text-neutral-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600"
+          >
+            {EXPENSE_CATEGORIES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <TextField
           label="Total amount (₹)"

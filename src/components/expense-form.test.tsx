@@ -31,12 +31,20 @@ describe('ExpenseFormScreen', () => {
     expect(html).toContain('Who actually paid')
     expect(html).toContain('Who should bear the cost')
     expect(html).toContain('Paid ₹')
+    expect(html).toContain('Category')
+    expect(html).toContain('Food')
+    expect(html).toContain('Travel')
+    expect(html).toContain('Stay')
+    expect(html).toContain('Shopping')
+    expect(html).toContain('Entertainment')
+    expect(html).toContain('Other')
   })
 
   it('prefills edit mode from the existing expense', () => {
     const group = makeGroup()
     const recorded = recordExpense(group, {
       description: 'Lunch',
+      category: 'Food',
       totalPaise: rs('100'),
       payments: [{ personId: group.people[0].id, amountPaise: rs('100') }],
       shares: [
@@ -58,6 +66,7 @@ describe('ExpenseFormScreen', () => {
     expect(html).toContain('Edit expense')
     expect(html).toContain('value="100.00"')
     expect(html).toContain('value="50.00"')
+    expect(html).toContain('value="Food"')
   })
 })
 
@@ -82,6 +91,7 @@ describe('GroupScreen', () => {
     const group = makeGroup()
     const recorded = recordExpense(group, {
       description: 'Dinner at the casa',
+      category: 'Food',
       totalPaise: rs('3000'),
       payments: [{ personId: group.people[0].id, amountPaise: rs('3000') }],
       shares: [
@@ -106,6 +116,7 @@ describe('GroupScreen', () => {
     expect(html).toContain('₹3000.00')
     expect(html).toContain('Paid by Nia')
     expect(html).toContain('Rahul owes ₹1000.00')
+    expect(html).toContain('>Food</span>')
   })
 
   it('shows correct balances for each person', () => {
@@ -131,6 +142,7 @@ describe('GroupScreen', () => {
     expect(html).toContain('Balances')
     expect(html).toContain('is owed ₹2000.00')
     expect(html).toContain('owes ₹1000.00')
+    expect(html).not.toContain('>Other</span>')
   })
 
   it('shows suggested transfers between debtors and creditors', () => {

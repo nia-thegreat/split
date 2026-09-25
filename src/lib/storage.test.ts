@@ -60,6 +60,7 @@ describe('saveGroup', () => {
     expect(parsed.name).toBe('Dinner')
     expect(parsed.people).toHaveLength(3)
     expect(parsed.expenses).toHaveLength(1)
+    expect(parsed.expenses[0].category).toBe('Other')
   })
 
   it('round-trips ids and paise amounts exactly', () => {
@@ -112,6 +113,20 @@ describe('loadGroup', () => {
 
     expect(loadGroup(storage)).toBeNull()
     expect(storage.raw()).toBeNull()
+  })
+
+  it('defaults missing categories from older data to Other', () => {
+    const group = realisticGroup()
+    const storage = new MemoryStorage()
+    saveGroup(group, storage)
+
+    const stored = JSON.parse(storage.raw() ?? '{}')
+    delete stored.expenses[0].category
+    storage.setItem(STORAGE_KEY, JSON.stringify(stored))
+
+    const loaded = loadGroup(storage)
+    expect(loaded?.expenses[0].category).toBe('Other')
+    expect(storage.raw()).not.toBeNull()
   })
 
   it('degrades gracefully when no storage backend is available', () => {
